@@ -1,0 +1,195 @@
+{
+  "main": {
+    "id": "e4146e40558f9085",
+    "type": "split",
+    "children": [
+      {
+        "id": "fc6e65a88365fd25",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "63ebb5d765e3d325",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Network Engineering/2 - Networking Models.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "2 - Networking Models"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "f1c567a15560b12b",
+    "type": "split",
+    "children": [
+      {
+        "id": "5aa79f00a3b5259e",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "f1c11b4536dbeb35",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "653cb1c31bd1157f",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "d8fe427cb6733e1f",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "1d5bd0e27119bfa9",
+    "type": "split",
+    "children": [
+      {
+        "id": "3a1e8e8bf718f5e6",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6a15c627f2aa8546",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "806ff8aa02f2340e",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "c93ef366a3650e28",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "1e08c12b835e8890",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false,
+      "publish:Publish changes...": false,
+      "obsidian-git:Open Git source control": false
+    }
+  },
+  "active": "63ebb5d765e3d325",
+  "lastOpenFiles": [
+    "Network Engineering/3 - Fundamentals of Ethernet LANs.md",
+    "Network Engineering/2 - Networking Models.md",
+    "Network Engineering/resources/tcp-ip-encapsulation.png",
+    "Network Engineering/resources/OSI-layers.svg",
+    "Network Engineering/resources/osi-vs-tcp-ip-layers.png",
+    "Network Engineering/resources/OSI-layers.png",
+    "Network Engineering/resources/osi-encapsulation-pdus.png",
+    "Network Engineering/1 - Network Devices.md",
+    "Network Engineering/resources/tcp-vs-osi.svg",
+    "README.md",
+    "OSI-layers.drawio.png",
+    "Pasted image 20251228183219.png",
+    "Pasted image 20251228183417.png",
+    "Network Engineering/resources",
+    "Pasted image 20251228182906.png",
+    "Untitled 2.base",
+    "Untitled 1.base",
+    "Untitled.base",
+    "Welcome.md",
+    "2025-09-24.md",
+    "Network Engineering"
+  ]
+}
