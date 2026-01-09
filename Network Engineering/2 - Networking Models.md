@@ -20,7 +20,7 @@ The Data Link layer is responsible for node-to-node data transfer with the help 
 They physical layer defines the physical characteristics of the medium used to transfer data between devices, such as cabling and energy. Examples of physical mediums include fiber cables, Unshielded Twisted Pair (UTP) cables, and radio signals.
 ### OSI Data Encapsulation 
 Each OSI layer adds a header, and sometimes a trailer, to the data from the layer above as it travels from the top layer to the bottom layer and out onto the network. This process is called **encapsulation**. Conversely, when the data reaches its intended recipient and moves from the bottom layer to the top layer, the headers and trailers are removed. This process is called **de-encapsulation**.
-<img src="osi-encapsulation-pdus.png" style="display:block;margin:auto;">
+<img src="osi-encapsulation.png" style="display:block;margin:auto;">
 OSI uses Protocol Data Units (PDU) to refer to its messages.  A PDU represents the bits that include headers, and trailers for a particular layer, as well as the encapsulated data.
 ### Same-Layer vs Adjacent-Layer Interactions
 Each OSI layer requests services from the layer below it. To provide these services, each layer adds a header, and sometimes a trailer, to the data from the layer above. The process by which layers on the same device interact and provide services to one another is called **adjacent-layer interaction**, while **same-layer interaction** refers to the logical communication between layers at the same level on different devices.
