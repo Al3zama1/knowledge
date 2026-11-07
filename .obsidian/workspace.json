@@ -1,0 +1,215 @@
+{
+  "main": {
+    "id": "4e2886bd225de6d1",
+    "type": "split",
+    "children": [
+      {
+        "id": "d24269bfde7b1b38",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ad456b42c2519d6d",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "01 Concepts/Network Engineering/Network Devices.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Network Devices"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "88fe0d594054a307",
+    "type": "split",
+    "children": [
+      {
+        "id": "1a954c0ad6403018",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "94f433bfdef68948",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "e7c0cc527daeab29",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "2394442a398a99d7",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "bf622bcde278e936",
+    "type": "split",
+    "children": [
+      {
+        "id": "ea261247d5c2165b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d4040d39d7802ae2",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Network Engineering/Network Devices.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for Network Devices"
+            }
+          },
+          {
+            "id": "14ba7a4408926ec6",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Network Engineering/Network Devices.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from Network Devices"
+            }
+          },
+          {
+            "id": "072ad4ecacff34eb",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "910d5eb25c1824ae",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "51914f740407f3e4",
+            "type": "leaf",
+            "state": {
+              "type": "calendar",
+              "state": {},
+              "icon": "calendar-with-checkmark",
+              "title": "Calendar"
+            }
+          },
+          {
+            "id": "19c053a804120134",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Network Engineering/Network Devices.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of Network Devices"
+            }
+          }
+        ],
+        "currentTab": 4
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "canvas:Create new canvas": false,
+      "graph:Open graph view": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "ad456b42c2519d6d",
+  "lastOpenFiles": [
+    "02 Labs/01 - Secure Multi-VLAN Campus Network/lab-01-README.md",
+    "01 Concepts/Network Engineering/Network Devices.md",
+    "02 Labs/01 - Secure Multi-VLAN Campus Network/images",
+    "02 Labs/01 - Secure Multi-VLAN Campus Network/logs",
+    "02 Labs/01 - Secure Multi-VLAN Campus Network/configs",
+    "02 Labs/01 - Secure Multi-VLAN Campus Network",
+    "02 Labs",
+    "01 Concepts",
+    "Untitled 1.base",
+    "Untitled.base",
+    "2026-08-02.md",
+    "Welcome.md",
+    "01 Concepts/Network Engineering"
+  ]
+}

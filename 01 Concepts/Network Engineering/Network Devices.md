@@ -1,0 +1,1 @@
+A network is a digital telecommunications network which allows nodes to share resources.
