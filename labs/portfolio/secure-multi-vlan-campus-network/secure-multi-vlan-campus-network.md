@@ -31,7 +31,7 @@ Design and build a redundant, secure campus network for five departments using V
 
 ## 2. Topology
 
-![Topology](images/topology.png)
+![Topology](topology.png)
 
 | Device | Image  | Role                                                                        |
 | ------ | ------ | --------------------------------------------------------------------------- |
@@ -203,7 +203,7 @@ All four switches have the same VLANs. Ports to other switches or to the router 
 | ASW1   | e0/0, e0/1                   | e0/2, e0/3, e1/0 |
 | ASW2   | e0/0, e0/1                   | e0/2, e0/3, e1/0 |
 
-ASW1's E1/0 interface is assigned to VLAN 10 to be used later in a DCHP injection attack carried out by the ROGUE client.
+ASW1's E1/0 interface is assigned to VLAN 10 to be later used in a DCHP injection attack carried out by a ROGUE client.
 
 **On all switches**
 
@@ -334,4 +334,3 @@ VLAN Name                             Status    Ports
 1005 trnet-default                    act/unsup
 
 ```
-

@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "01 Concepts/Network Engineering/Network Devices.md",
+                "file": "labs/portfolio/secure-multi-vlan-campus-network/secure-multi-vlan-campus-network.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Network Devices"
+              "title": "secure-multi-vlan-campus-network"
             }
           }
         ]
@@ -158,8 +158,8 @@
             "state": {
               "type": "calendar",
               "state": {},
-              "icon": "calendar-with-checkmark",
-              "title": "Calendar"
+              "icon": "lucide-ghost",
+              "title": "calendar"
             }
           },
           {
@@ -198,18 +198,21 @@
   },
   "active": "ad456b42c2519d6d",
   "lastOpenFiles": [
-    "02 Labs/01 - Secure Multi-VLAN Campus Network/lab-01-README.md",
-    "01 Concepts/Network Engineering/Network Devices.md",
-    "02 Labs/01 - Secure Multi-VLAN Campus Network/images",
+    "labs/portfolio/README.md",
+    "labs/portfolio/secure-multi-vlan-campus-network/secure-multi-vlan-campus-network.md",
+    "labs/portfolio/secure-multi-vlan-campus-network",
+    "02 Labs/01 - Secure Multi-VLAN Campus Network/Unconfirmed 878299.crdownload",
+    "labs/portfolio/secure-multi-vlan-campus-network/files",
+    "notes/Network Engineering/Network Devices.md",
+    "labs/portfolio/secure-multi-vlan-campus-network/images/topology.png",
+    "labs/portfolio/secure-multi-vlan-campus-network/images",
+    "labs/portfolio",
+    "labs",
+    "labs/portfolio/secure-multi-vlan-campus-network/images",
     "02 Labs/01 - Secure Multi-VLAN Campus Network/logs",
-    "02 Labs/01 - Secure Multi-VLAN Campus Network/configs",
-    "02 Labs/01 - Secure Multi-VLAN Campus Network",
-    "02 Labs",
-    "01 Concepts",
-    "Untitled 1.base",
-    "Untitled.base",
+    "labs/portfolio/secure-multi-vlan-campus-network/files",
+    "labs/portfolio",
     "2026-08-02.md",
-    "Welcome.md",
-    "01 Concepts/Network Engineering"
+    "Welcome.md"
   ]
 }

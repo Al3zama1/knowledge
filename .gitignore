@@ -1,0 +1,13 @@
+# Obsidian – machine/session-specific
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/workspaces.json
+.trash/
+
+# Quartz build output
+.build/
+
+# OS clutter
+.DS_Store
+Thumbs.db
+desktop.ini
