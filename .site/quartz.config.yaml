@@ -13,32 +13,32 @@ configuration:
     - templates
     - .obsidian
   theme:
-    fontOrigin: googleFonts
+    fontOrigin: local
     cdnCaching: true
     typography:
-      header: Schibsted Grotesk
-      body: Source Sans Pro
-      code: IBM Plex Mono
+      header: system-ui
+      body: system-ui
+      code: ui-monospace
     colors:
       lightMode:
-        light: "#faf8f8"
-        lightgray: "#e5e5e5"
-        gray: "#b8b8b8"
-        darkgray: "#4e4e4e"
-        dark: "#2b2b2b"
-        secondary: "#284b63"
-        tertiary: "#84a59d"
-        highlight: rgba(143, 159, 169, 0.15)
+        light: "#f6f8fb"         # --bg
+        lightgray: "#dde4ee"     # --border
+        gray: "#5b6b82"          # --muted
+        darkgray: "#142033"      # --text (body)
+        dark: "#142033"          # --text (headings)
+        secondary: "#0b6bcb"     # --accent
+        tertiary: "#0957a6"      # accent hover (slightly darker)
+        highlight: "#e8f0fb"     # --chip
         textHighlight: "#fff23688"
       darkMode:
-        light: "#161618"
-        lightgray: "#393639"
-        gray: "#646464"
-        darkgray: "#d4d4d4"
-        dark: "#ebebec"
-        secondary: "#7b97aa"
-        tertiary: "#84a59d"
-        highlight: rgba(143, 159, 169, 0.15)
+        light: "#0b1220"         # --bg
+        lightgray: "#22304a"     # --border
+        gray: "#97a6bf"          # --muted
+        darkgray: "#e6edf7"      # --text (body)
+        dark: "#e6edf7"          # --text (headings)
+        secondary: "#4da3ff"     # --accent
+        tertiary: "#7dbcff"      # accent hover (slightly lighter)
+        highlight: "#17263f"     # --chip
         textHighlight: "#b3aa0288"
   links:
     markdownLinkResolution: shortest
