@@ -181,30 +181,81 @@ Total cdp entries displayed : 5
 `show interfaces description` confirms every description and that unused ports are `admin down`. `show cdp neighbors` confirms the descriptions match the real cabling.
 
 ### 5.2 VLANs and trunks
-The second layer plane is segmented with the help of VLANS, improving security and limiting the range of broadcast frames. Each VLAN represents a department or location.
+Layer 2 is segmented with VLANs, which improves security and limits the size of broadcast domains. Each VLAN represents a department or network function.
+
+| VLAN | Name        | Purpose                      |
+| ---- | ----------- | ---------------------------- |
+| 10   | ENGINEERING | Engineering users            |
+| 20   | SALES       | Sales users                  |
+| 30   | GUEST       | Guest users                  |
+| 40   | SERVERS     | SRV                          |
+| 50   | IT-ADMIN    | Admin workstation            |
+| 99   | MGMT        | Device management            |
+| 998  | PARKING     | Unused ports (shut down)     |
+| 999  | NATIVE      | Unused native VLAN on trunks |
+
+All four switches have the same VLANs. Ports to other switches or to the router are 802.1Q trunks with the same native VLAN and allowed list. Ports to hosts are access ports, and unused ports are parked in VLAN 998.
+
+| Switch | Trunk ports                  | Access Ports     |
+| ------ | ---------------------------- | ---------------- |
+| DSW1   | e0/0, e0/1, e0/2, e0/3, e1/0 | none             |
+| DSW2   | e0/1, e0/2, e0/3, e1/0       | none             |
+| ASW1   | e0/0, e0/1                   | e0/2, e0/3, e1/0 |
+| ASW2   | e0/0, e0/1                   | e0/2, e0/3, e1/0 |
+ASW1's E1/0 interface is assigned to VLAN 10 to be used later in a DCHP injection attack carried out by the ROGUE client.
+
+**On all switches**
 
 ```
 vtp mode transparent
-
 vlan 10
  name ENGINEERING
-! ...repeat for 20, 30, 40, 50, 99, 998, 999
+vlan 20
+ name SALES
+vlan 30
+ name GUEST
+vlan 40
+ name SERVERS
+vlan 50
+ name IT-ADMIN
+vlan 99
+ name MGMT
+vlan 998
+ name PARKING
+vlan 999
+ name NATIVE
+```
+
+**Trunk ports** (DSW1 shown, use the trunk ports from the table on each switch)
+
+```
 interface range e0/0-3, e1/0
  switchport trunk encapsulation dot1q
  switchport mode trunk
  switchport trunk native vlan 999
  switchport nonegotiate
  switchport trunk allowed vlan 10,20,30,40,50,99
- 
+```
+
+**Access and unused ports** (ASW1 shown)
+
+```
+interface range e0/2, e1/0
+ switchport mode access
+ switchport access vlan 10
+interface e0/3
+ switchport mode access
+ switchport access vlan 20
 interface range e1/1-3, e2/0-3, e3/0-3
  switchport mode access
  switchport access vlan 998
 ```
 
-Output:
+On the distribution switches , the unused ports are parked the same way (e1/1-3, e2/0-3, e3/0-3).
+
+**Verification**
+
 ```
-
-
 DSW1#show vlan brief
 
 VLAN Name                             Status    Ports
@@ -224,8 +275,9 @@ VLAN Name                             Status    Ports
 1003 token-ring-default               act/unsup
 1004 fddinet-default                  act/unsup
 1005 trnet-default                    act/unsup
+```
 
-
+```
 DSW1#show interfaces trunk
 
 Port        Mode             Encapsulation  Status        Native vlan
@@ -250,10 +302,35 @@ Et0/3       10,20,30,40,50,99
 Et1/0       10,20,30,40,50,99
 
 Port        Vlans in spanning tree forwarding state and not pruned
+
+Port        Vlans in spanning tree forwarding state and not pruned
 Et0/0       10,20,30,40,50,99
 Et0/1       10,20,30,40,50,99
 Et0/2       10,20,30,40,50,99
 Et0/3       10,20,30,40,50,99
 Et1/0       10,20,30,40,50,99
+```
+
+```
+ASW1#show vlan brief
+
+VLAN Name                             Status    Ports
+---- -------------------------------- --------- -------------------------------
+1    default                          active
+10   ENGINEERING                      active    Et0/2, Et1/0
+20   SALES                            active    Et0/3
+30   GUEST                            active
+40   SERVERS                          active
+50   IT-ADMIN                         active
+99   MGMT                             active
+998  PARKING                          active    Et1/1, Et1/2, Et1/3, Et2/0
+                                                Et2/1, Et2/2, Et2/3, Et3/0
+                                                Et3/1, Et3/2, Et3/3
+999  NATIVE                           active
+1002 fddi-default                     act/unsup
+1003 token-ring-default               act/unsup
+1004 fddinet-default                  act/unsup
+1005 trnet-default                    act/unsup
+
 ```
 
