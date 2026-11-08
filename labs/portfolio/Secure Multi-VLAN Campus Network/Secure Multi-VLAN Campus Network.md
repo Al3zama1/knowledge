@@ -1,4 +1,3 @@
-# Lab 01: Secure Multi-VLAN Campus Network
 
 > Educational home lab built in GNS3 on my own computer. Not a production environment.
 > Video walkthrough: [YouTube link](#)
