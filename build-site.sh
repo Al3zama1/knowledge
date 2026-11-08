@@ -18,5 +18,6 @@ cp -r labs  .build/content/labs
 # Install dependencies and plugins, then build
 cd .build
 npm ci
+npm i --no-save @quartz-themes/default
 npx quartz plugin install --from-config
 npx quartz build "$@"
