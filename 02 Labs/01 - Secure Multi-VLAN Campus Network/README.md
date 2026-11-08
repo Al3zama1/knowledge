@@ -202,6 +202,7 @@ All four switches have the same VLANs. Ports to other switches or to the router 
 | DSW2   | e0/1, e0/2, e0/3, e1/0       | none             |
 | ASW1   | e0/0, e0/1                   | e0/2, e0/3, e1/0 |
 | ASW2   | e0/0, e0/1                   | e0/2, e0/3, e1/0 |
+
 ASW1's E1/0 interface is assigned to VLAN 10 to be used later in a DCHP injection attack carried out by the ROGUE client.
 
 **On all switches**
