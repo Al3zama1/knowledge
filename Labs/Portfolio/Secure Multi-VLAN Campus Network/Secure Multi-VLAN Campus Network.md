@@ -1,94 +1,87 @@
-
-> Educational home lab built in GNS3 on my own computer. Not a production environment.
-> Video walkthrough: [YouTube link](#)
-
-A redundant two-tier campus LAN (collapsed core) for five departments, with VLSM addressing, load-balanced Rapid PVST+, EtherChannel, Layer 2 security, ACL-controlled access, SSH-only management, NTP, syslog and SNMP. I verified it, then found and fixed injected faults.
-
-**Skills shown:** VLSM subnetting, VLANs and 802.1Q trunking, Rapid PVST+, LACP EtherChannel, router-on-a-stick, DHCP, port security, DHCP snooping, DAI, ACLs, SSH hardening, NTP/syslog/SNMP, troubleshooting.
-
+---
+tags:
+  - lab
+  - switching
+  - vlans
+  - stp
+  - etherchannel
+  - security
+  - dhcp
+type: lab
+category: portfolio
+date: 2026-11-08
+video:
 ---
 
-## Contents
+> [!info] Lab environment
+> This lab ran in GNS3 on my own computer for educational purposes. Nothing here took place in a production or employer environment.
 
-1. [Objective](#1-objective)
-2. [Topology](#2-topology)
-3. [Addressing plan (VLSM)](#3-addressing-plan-vlsm)
-4. [Tools and environment](#4-tools-and-environment)
-5. [Build, step by step](#5-build-step-by-step)
-6. [Verification](#6-verification)
-7. [Security tests](#7-security-tests)
-8. [Troubleshooting: injected faults](#8-troubleshooting-injected-faults)
-9. [What I learned](#9-what-i-learned)
-10. [Limitations](#10-limitations)
-11. [Files in this repo](#11-files-in-this-repo)
+## Challenge / Objective
+Design and build a redundant, secure campus network for five departments using VLSM addressing, then verify it, document it and troubleshoot injected faults.
 
----
+## Video walkthrough
+![](https://www.youtube.com/watch?v=VIDEO_ID)
 
-## 1. Objective
+## Lab Architecture
+![[topology.png]]
 
-Design and build a redundant, secure campus network for five departments using VLSM addressing, then verify it, document it, and troubleshoot injected faults.
+- Two distribution switches (**DSW1**, **DSW2**) and two access point switches (**ASW1**, **ASW2**) with redundant uplinks
+- A LACP EtherChannel between the distribution switches
+- Router-on-a-stick inter-VLAN routing on R1, with the DHCP server on the edge router
+- Six VLANs subnetted from `192.168.10.0/23` using VLSM, including a separate IT admin VLAN.
+- A management VLAN that only the IT admin subnet can reach, through SSH
 
-## 2. Topology
+**Network devices**
 
-![Topology](topology.png)
+| Device | Role                                                                        |
+| ------ | --------------------------------------------------------------------------- |
+| R1     | Edge router: inter-VLAN routing (router-on-a-stick), DHCP, ACLs, NTP source |
+| DSW1   | Distribution switch, STP root for VLANs 10, 20, 99                          |
+| DSW2   | Distribution switch, STP root for VLANs 30, 40                              |
+| ASW1   | Access switch: Engineering and Sales                                        |
+| ASW2   | Access switch: Guests, Servers, Management                                  |
 
-| Device | Image  | Role                                                                        |
-| ------ | ------ | --------------------------------------------------------------------------- |
-| R1     | IOSv   | Edge router: inter-VLAN routing (router-on-a-stick), DHCP, ACLs, NTP source |
-| DSW1   | IOSvL2 | Distribution switch, STP root for VLANs 10, 20, 99                          |
-| DSW2   | IOSvL2 | Distribution switch, STP root for VLANs 30, 40                              |
-| ASW1   | IOSvL2 | Access switch: Engineering and Sales                                        |
-| ASW2   | IOSvL2 | Access switch: Guests, Servers, Management                                  |
+**Network links**
 
-| Link | From | To | Type |
-|---|---|---|---|
-| 1 | R1 e0/0 | DSW1 e0/0 | Trunk |
+| Link | From        | To          | Type                           |
+| ---- | ----------- | ----------- | ------------------------------ |
+| 1    | R1 e0/0     | DSW1 e0/0   | Trunk                          |
 | 2, 3 | DSW1 e0/1-2 | DSW2 e0/1-2 | LACP EtherChannel (Po1), trunk |
-| 4 | DSW1 e0/3 | ASW1 e0/0 | Trunk |
-| 5 | DSW2 e0/3 | ASW1 e0/1 | Trunk |
-| 6 | DSW1 e1/0 | ASW2 e0/0 | Trunk |
-| 7 | DSW2 e1/0 | ASW2 e0/1 | Trunk |
+| 4    | DSW1 e0/3   | ASW1 e0/0   | Trunk                          |
+| 5    | DSW2 e0/3   | ASW1 e0/1   | Trunk                          |
+| 6    | DSW1 e1/0   | ASW2 e0/0   | Trunk                          |
+| 7    | DSW2 e1/0   | ASW2 e0/1   | Trunk                          |
 
-| Endpoint | Port | VLAN |
-|---|---|---|
-| PC-ENG | ASW1 e0/2 | 10 |
-| PC-SALES | ASW1 e0/3 | 20 |
-| ROGUE (Ubuntu + dnsmasq, off until security test) | ASW1 e1/0 | 10 |
-| PC-GUEST | ASW2 e0/2 | 30 |
-| SRV (Ubuntu: syslog, SNMP polling, NTP tests) | ASW2 e0/3 | 40 |
-| ADMIN (Ubuntu, SSH client) | ASW2 e1/0 | 50 |
+**Client devices**
 
-Unused ports are in VLAN 998 and shut down.
+| Endpoint                                          | Port      | VLAN |
+| ------------------------------------------------- | --------- | ---- |
+| PC-ENG (Ubuntu)                                   | ASW1 e0/2 | 10   |
+| PC-SALES (VPC)                                    | ASW1 e0/3 | 20   |
+| ROGUE (Ubuntu + dnsmasq, off until security test) | ASW1 e1/0 | 10   |
+| PC-GUEST (VPC)                                    | ASW2 e0/2 | 30   |
+| SRV (Ubuntu: syslog, SNMP polling, NTP tests)     | ASW2 e0/3 | 40   |
+| ADMIN (Ubuntu, SSH client)                        | ASW2 e1/0 | 50   |
 
-## 3. Addressing plan (VLSM)
+## Tools & Technologies
+GNS3 · Cisco OS · VLANs · Rapid PVST+ · EtherChannel · DHCP Snooping · DAI · Port Security · SSH
 
-Block given: `192.168.10.0/23`. Allocated largest requirement first so every block starts on its own boundary.
+## What I Implemented
+- [[#Step 1 – Base Configuration|Applied a base configuration]] to every device: hostname, domain name, login banner, interface descriptions and unused ports shut down.
+- [[#Step 2 – VLSM addressing plan|Subnetted the address block with VLSM]] and documented every VLAN, gateway and range.
+- [[#Step 3 - VLANs, trunks and native VLAN|Configured access ports, 802.1Q trunks, a custom native VLAN and disabled DTP.]]
+- [[#Step 4 – EtherChannel (LACP)|Bundled the distribution uplinks into an LACP EtherChannel.]]
+- [[#Step 5 – Rapid PVST+ and per-VLAN root bridges|Ran Rapid PVST+ with a different root bridge per VLAN]] so both uplinks carry traffic.
+- [[#Step 6 – Inter-VLAN routing and DHCP|Set up router-on-a-stick inter-VLAN routing and DHCP on R1.]]
+- [[#Step 7 – Edge protection and port security|Protected the edge with PortFast, BPDU Guard, Root Guard and port security.]]
+- [[#Step 8 – DHCP snooping and Dynamic ARP Inspection|Blocked a rogue DHCP server with DHCP snooping and added Dynamic ARP Inspection.]]
+- [[#Step 9 – ACLs and SSH-only management|Isolated guests with an inbound ACL and limited the management VLAN to the IT admin subnet with SSH-only access.]]
+- [[#Step 10 – NTP, syslog and SNMPv3|Added NTP, syslog and SNMPv3]], then [[#Troubleshooting – seven injected faults|found and fixed seven injected faults]].
 
-| VLAN | Name | Hosts | Network | Usable range | Gateway (R1) |
-|---|---|---|---|---|---|
-| 10 | ENGINEERING | 100 | 192.168.10.0/25 | .1 to .126 | 192.168.10.1 |
-| 30 | GUEST | 50 | 192.168.10.128/26 | .129 to .190 | 192.168.10.129 |
-| 20 | SALES | 40 | 192.168.10.192/26 | .193 to .254 | 192.168.10.193 |
-| 40 | SERVERS | 20 | 192.168.11.0/27 | .1 to .30 | 192.168.11.1 |
-| 99 | MGMT | 12 | 192.168.11.32/28 | .33 to .46 | 192.168.11.33 |
-| 50 | IT-ADMIN | 2 | 192.168.11.48/29 | .49 to .54 | 192.168.11.49 |
-| 999 | NATIVE | unused | | | |
-| 998 | PARKING | unused | | | |
+## Implementation
 
-Static addresses: DSW1 .34, DSW2 .35, ASW1 .36, ASW2 .37 (192.168.11.x, VLAN 99); ADMIN 192.168.11.50; SRV 192.168.11.10.
-
-## 4. Tools and environment
-
-- GNS3 with the GNS3 VM, running on a Windows laptop (VMware Workstation or Hyper-V)
-- Cisco IOSv and IOSvL2 images
-- Ubuntu Docker containers (ROGUE, SRV, ADMIN) with dnsmasq, openssh-client, rsyslog, snmp
-- Wireshark (built in to GNS3) for packet captures
-- Git for this repository
-
-## 5. Build, step by step
-
-### 5.1 Base configuration
-Configure the hostname, domain name, banner and interface descriptions on every device. Each interface description names the connected neighbor device and the port on it. Unused ports are shut down.
+### Step 1 – Base Configuration
+Before any switching or routing, every device gets the same baseline: a hostname, a domain name, a legal login banner, a description on every connected interface, and all unused ports shut down. Here is DSW1:
 
 | Device | Interface  | Description          |
 | ------ | ---------- | -------------------- |
@@ -97,9 +90,8 @@ Configure the hostname, domain name, banner and interface descriptions on every 
 | DSW1   | e0/1, e0/2 | DSW2-E0/1, DSW2-E0/2 |
 | DSW1   | e0/3       | ASW1-E0/0            |
 | DSW1   | e1/0       | ASW2-E0/0            |
-
-DSW1 (the other switches use the same configuration with their own hostname and descriptions):
-```
+DSW1:
+```text
 enable
 configure terminal
 hostname DSW1
@@ -119,95 +111,40 @@ interface range e1/1-3, e2/0-3, e3/0-3
  shutdown
 ```
 
-R1 is configured the same way, with a banner and `no shutdown` on its connected interface:
-```
-enable
-configure terminal
-hostname R1
-ip domain-name withabran.com
-banner motd # Authorized access only #
-interface e0/0
- description DSW1-E0/0
- no shutdown
-```
+DSW2, ASW1, ASW2, and R1 follow the same pattern with their own hostnames and neighbors.
 
-``Full configs for every device are in [`configs/`](configs/).``
+**Why**:
+* **Hostnames** show up in the prompt, in logs and in CDP, so you always know which device you're on.
+* **Interface descriptions** name the device and port at the other end of each link, which makes `show interfaces status` and troubleshooting much faster.
+* **The domain name** is needed later to generate the RSA keys for SSH.
+* **The banner**: warns that access is restricted, a standard requirement on managed devices.
+* **Shutting down unused ports** means nobody can plug in a spare port and land on the network.
 
-**Verification**
+### Step 2 – VLSM addressing plan
+I sized each subnet for its host count, assigning the largest first so the `/23` block is used with no gaps.
 
-```
-DWS1# show interfaces description
-Interface                      Status         Protocol Description
-Et0/0                          up             up       R1-E0/0
-Et0/1                          up             up       DSW2-E0/1
-Et0/2                          up             up       DSW2-E0/2
-Et0/3                          up             up       ASW1-E0/0
-Et1/0                          up             up       ASW2-E0/0
-Et1/1                          admin down     down
-Et1/2                          admin down     down
-Et1/3                          admin down     down
-Et2/0                          admin down     down
-Et2/1                          admin down     down
-Et2/2                          admin down     down
-Et2/3                          admin down     down
-Et3/0                          admin down     down
-Et3/1                          admin down     down
-Et3/2                          admin down     down
-Et3/3                          admin down     down
+| VLAN | Name        | Hosts | Subnet                        | Usable range          | Gateway (R1)   |
+| ---- | ----------- | ----- | ----------------------------- | --------------------- | -------------- |
+| 10   | ENGINEERING | 100   | 192.168.10.0/25               | 192.168.10.1 – .126   | 192.168.10.1   |
+| 30   | GUEST       | 50    | 192.168.10.128/26             | 192.168.10.129 - .190 | 192.168.10.129 |
+| 20   | SALES       | 40    | 192.168.10.192/26             | 192.168.10.193 .254   | 192.168.10.193 |
+| 40   | SERVERS     | 20    | 192.168.11.0/27               | 192.168.11.1 - .30    | 192.168.11.1   |
+| 99   | MGMT        | 12    | 192.168.11.32/28              | 192.168.11.33 - .46   | 192.168.11.33  |
+| 50   | IT-ADMIN    | 2     | 192.168.11.48/29              | 192.168.11.49 - .54   | 192.168.11.49  |
+| 999  | NATIVE      | -     | unused (trunk native VLAN)    | -                     | -              |
+| 998  | PARKING     | -     | unused (holds shutdown ports) | -                     | -              |
 
+Free for growth: `192.168.11.56 - 192.168.11.255`
+Static management addresses: R1 `.33`, DSW1 `.34`, DSW1 `.35`, ASW1 `.36`, ASW2 `.37`
 
+**Why IT-ADMIN is a /29, not a /30**: the lab has one admin PC, so with the gateway the VLAN needs two addresses, and a /30 would fit exactly. I used a /29 instead to leave room for growth: it gives six usable addresses, enough for a second admin workstation without re-addressing the VLAN or rewriting the management ACLs.
 
-DSW1#show cdp neighbors
-Capability Codes: R - Router, T - Trans Bridge, B - Source Route Bridge
-                  S - Switch, H - Host, I - IGMP, r - Repeater, P - Phone,
-                  D - Remote, C - CVTA, M - Two-port Mac Relay
+### Step 3 - VLANs, trunks and native VLAN
+I created the same VLANs on all four switches, set an unused native VLAN, and disabled DTP so no port can negotiate itself into a trunk.
 
-Device ID        Local Intrfce     Holdtme    Capability  Platform  Port ID
-ASW1.withabran.com
-                 Eth 0/3           148             R S I  Linux Uni Eth 0/0
-ASW2.withabran.com
-                 Eth 1/0           155             R S I  Linux Uni Eth 0/0
-DSW2.withabran.com
-                 Eth 0/2           173             R S I  Linux Uni Eth 0/2
-DSW2.withabran.com
-                 Eth 0/1           162             R S I  Linux Uni Eth 0/1
-R1.withabran.com Eth 0/0           166              R B   Linux Uni Eth 0/0
-
-Total cdp entries displayed : 5
-
-```
-
-`show interfaces description` confirms every description and that unused ports are `admin down`. `show cdp neighbors` confirms the descriptions match the real cabling.
-
-### 5.2 VLANs and trunks
-Layer 2 is segmented with VLANs, which improves security and limits the size of broadcast domains. Each VLAN represents a department or network function.
-
-| VLAN | Name        | Purpose                      |
-| ---- | ----------- | ---------------------------- |
-| 10   | ENGINEERING | Engineering users            |
-| 20   | SALES       | Sales users                  |
-| 30   | GUEST       | Guest users                  |
-| 40   | SERVERS     | SRV                          |
-| 50   | IT-ADMIN    | Admin workstation            |
-| 99   | MGMT        | Device management            |
-| 998  | PARKING     | Unused ports (shut down)     |
-| 999  | NATIVE      | Unused native VLAN on trunks |
-
-All four switches have the same VLANs. Ports to other switches or to the router are 802.1Q trunks with the same native VLAN and allowed list. Ports to hosts are access ports, and unused ports are parked in VLAN 998.
-
-| Switch | Trunk ports                  | Access Ports     |
-| ------ | ---------------------------- | ---------------- |
-| DSW1   | e0/0, e0/1, e0/2, e0/3, e1/0 | none             |
-| DSW2   | e0/1, e0/2, e0/3, e1/0       | none             |
-| ASW1   | e0/0, e0/1                   | e0/2, e0/3, e1/0 |
-| ASW2   | e0/0, e0/1                   | e0/2, e0/3, e1/0 |
-
-ASW1's E1/0 interface is assigned to VLAN 10 to be later used in a DCHP injection attack carried out by a ROGUE client.
-
-**On all switches**
-
-```
+```text
 vtp mode transparent
+
 vlan 10
  name ENGINEERING
 vlan 20
@@ -224,11 +161,12 @@ vlan 998
  name PARKING
 vlan 999
  name NATIVE
+ 
 ```
 
 **Trunk ports** (DSW1 shown, use the trunk ports from the table on each switch)
 
-```
+```text
 interface range e0/0-3, e1/0
  switchport trunk encapsulation dot1q
  switchport mode trunk
@@ -239,7 +177,7 @@ interface range e0/0-3, e1/0
 
 **Access and unused ports** (ASW1 shown)
 
-```
+```text
 interface range e0/2, e1/0
  switchport mode access
  switchport access vlan 10
@@ -253,83 +191,42 @@ interface range e1/1-3, e2/0-3, e3/0-3
 
 On the distribution switches , the unused ports are parked the same way (e1/1-3, e2/0-3, e3/0-3).
 
-**Verification**
+## Verification
+Show the key `show` commands and explain what in the output proves it works.
 
-```
-DSW1#show vlan brief
-
-VLAN Name                             Status    Ports
----- -------------------------------- --------- -------------------------------
-1    default                          active
-10   ENGINEERING                      active
-20   SALES                            active
-30   GUEST                            active
-40   SERVERS                          active
-50   IT-ADMIN                         active
-99   MGMT                             active
-998  PARKING                          active    Et1/1, Et1/2, Et1/3, Et2/0
-                                                Et2/1, Et2/2, Et2/3, Et3/0
-                                                Et3/1, Et3/2, Et3/3
-999  NATIVE                           active
-1002 fddi-default                     act/unsup
-1003 token-ring-default               act/unsup
-1004 fddinet-default                  act/unsup
-1005 trnet-default                    act/unsup
+```text
+! paste show command output here
 ```
 
-```
-DSW1#show interfaces trunk
+## Troubleshooting
 
-Port        Mode             Encapsulation  Status        Native vlan
-Et0/0       on               802.1q         trunking      999
-Et0/1       on               802.1q         trunking      999
-Et0/2       on               802.1q         trunking      999
-Et0/3       on               802.1q         trunking      999
-Et1/0       on               802.1q         trunking      999
+### Fault 1 – Short name
+**Symptom:** What you noticed.
+**Cause:** What was actually wrong.
+**Fix:** What you changed, and how you confirmed it worked.
 
-Port        Vlans allowed on trunk
-Et0/0       10,20,30,40,50,99
-Et0/1       10,20,30,40,50,99
-Et0/2       10,20,30,40,50,99
-Et0/3       10,20,30,40,50,99
-Et1/0       10,20,30,40,50,99
-
-Port        Vlans allowed and active in management domain
-Et0/0       10,20,30,40,50,99
-Et0/1       10,20,30,40,50,99
-Et0/2       10,20,30,40,50,99
-Et0/3       10,20,30,40,50,99
-Et1/0       10,20,30,40,50,99
-
-Port        Vlans in spanning tree forwarding state and not pruned
-
-Port        Vlans in spanning tree forwarding state and not pruned
-Et0/0       10,20,30,40,50,99
-Et0/1       10,20,30,40,50,99
-Et0/2       10,20,30,40,50,99
-Et0/3       10,20,30,40,50,99
-Et1/0       10,20,30,40,50,99
+```text
+! relevant output or config
 ```
 
-```
-ASW1#show vlan brief
+## Result & Key Learning Outcomes
+- 
+- 
 
-VLAN Name                             Status    Ports
----- -------------------------------- --------- -------------------------------
-1    default                          active
-10   ENGINEERING                      active    Et0/2, Et1/0
-20   SALES                            active    Et0/3
-30   GUEST                            active
-40   SERVERS                          active
-50   IT-ADMIN                         active
-99   MGMT                             active
-998  PARKING                          active    Et1/1, Et1/2, Et1/3, Et2/0
-                                                Et2/1, Et2/2, Et2/3, Et3/0
-                                                Et3/1, Et3/2, Et3/3
-999  NATIVE                           active
-1002 fddi-default                     act/unsup
-1003 token-ring-default               act/unsup
-1004 fddinet-default                  act/unsup
-1005 trnet-default                    act/unsup
+## Skills Demonstrated
+- 
+- 
 
-```
+## Files
+- [All files for this lab](https://github.com/al3zama1/knowledge/tree/main/Labs/Portfolio/LAB-FOLDER/files)
+
+
+
+> Educational home lab built in GNS3 on my own computer. Not a production environment.
+> Video walkthrough: [YouTube link](#)
+
+A redundant two-tier campus LAN (collapsed core) for five departments, with VLSM addressing, load-balanced Rapid PVST+, EtherChannel, Layer 2 security, ACL-controlled access, SSH-only management, NTP, syslog and SNMP. I verified it, then found and fixed injected faults.
+
+**Skills shown:** VLSM subnetting, VLANs and 802.1Q trunking, Rapid PVST+, LACP EtherChannel, router-on-a-stick, DHCP, port security, DHCP snooping, DAI, ACLs, SSH hardening, NTP/syslog/SNMP, troubleshooting.
+
+---
