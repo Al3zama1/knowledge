@@ -83,6 +83,8 @@ GNS3 · Cisco OS · VLANs · Rapid PVST+ · EtherChannel · DHCP Snooping · DAI
 > Each step names the device it was configured on, and the prompt in every code block shows the device and the mode. When the same configuration applies to several devices, one device is shown in full. The others follow the same pattern: take their interface numbers from the **Network links** and **Client devices** tables, and their VLANs and addresses from the **VLSM addressing plan**.
 
 ### Step 1 – Base Configuration
+**Configure on**: all devices. **Shown**: DSW1.
+
 Before any switching or routing, every device gets the same baseline: a hostname, a domain name, a legal login banner, a description on every connected interface, and all unused ports shut down.
 
 DSW1:
