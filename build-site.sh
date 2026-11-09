@@ -13,8 +13,8 @@ if [ -f .site/quartz.lock.json ]; then cp .site/quartz.lock.json .build/; fi
 # Copy your notes in
 rm -rf .build/content && mkdir -p .build/content
 cp index.md .build/content/
-cp -r notes .build/content/notes
-cp -r labs  .build/content/labs
+cp -r Notes .build/content/notes
+cp -r Labs  .build/content/labs
 
 # Install dependencies and plugins
 cd .build
