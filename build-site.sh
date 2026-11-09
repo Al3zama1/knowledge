@@ -7,6 +7,7 @@ git clone --depth 1 --branch v5 https://github.com/jackyzha0/quartz.git .build
 
 # Apply your settings
 cp .site/quartz.config.yaml .build/
+cp .site/quartz.ts .build/quartz.ts
 if [ -f .site/quartz.lock.json ]; then cp .site/quartz.lock.json .build/; fi
 
 # Copy your notes in
