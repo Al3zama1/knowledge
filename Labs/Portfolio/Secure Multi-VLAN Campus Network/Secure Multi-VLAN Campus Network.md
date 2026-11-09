@@ -37,7 +37,7 @@ Design and build a redundant, secure campus network for five departments using V
 | ------ | --------------------------------------------------------------------------- |
 | R1     | Edge router: inter-VLAN routing (router-on-a-stick), DHCP, ACLs, NTP source |
 | DSW1   | Distribution switch, STP root for VLANs 10, 20, 99                          |
-| DSW2   | Distribution switch, STP root for VLANs 30, 40                              |
+| DSW2   | Distribution switch, STP root for VLANs 30, 40, 40                          |
 | ASW1   | Access switch: Engineering and Sales                                        |
 | ASW2   | Access switch: Guests, Servers, Management                                  |
 
@@ -79,39 +79,36 @@ GNS3 · Cisco OS · VLANs · Rapid PVST+ · EtherChannel · DHCP Snooping · DAI
 - [[#Step 10 – NTP, syslog and SNMPv3|Added NTP, syslog and SNMPv3]], then [[#Troubleshooting – seven injected faults|found and fixed seven injected faults]].
 
 ## Implementation
+> [!tip] How to read the configs
+> Each step names the device it was configured on, and the prompt in every code block shows the device and the mode. When the same configuration applies to several devices, one device is shown in full. The others follow the same pattern: take their interface numbers from the **Network links** and **Client devices** tables, and their VLANs and addresses from the **VLSM addressing plan**.
 
 ### Step 1 – Base Configuration
-Before any switching or routing, every device gets the same baseline: a hostname, a domain name, a legal login banner, a description on every connected interface, and all unused ports shut down. Here is DSW1:
+Before any switching or routing, every device gets the same baseline: a hostname, a domain name, a legal login banner, a description on every connected interface, and all unused ports shut down.
 
-| Device | Interface  | Description          |
-| ------ | ---------- | -------------------- |
-| R1     | e0/0       | DSW1-E0/0            |
-| DSW1   | e0/0       | R1-E0/0              |
-| DSW1   | e0/1, e0/2 | DSW2-E0/1, DSW2-E0/2 |
-| DSW1   | e0/3       | ASW1-E0/0            |
-| DSW1   | e1/0       | ASW2-E0/0            |
 DSW1:
 ```text
-enable
-configure terminal
-hostname DSW1
-ip domain-name withabran.com
-banner motd # Authorized access only #
-interface e0/0
- description R1-E0/0
-interface e0/1
- description DSW2-E0/1
-interface e0/2
- description DSW2-E0/2
-interface e0/3
- description ASW1-E0/0
-interface e1/0
- description ASW2-E0/0
-interface range e1/1-3, e2/0-3, e3/0-3
- shutdown
+Switch> enable
+Switch# configure terminal
+Switch(config)# hostname DSW1
+DSW1(config)# ip domain-name withabran.com
+DSW1(config)# banner motd # Authorized access only #
+DSW1(config)# interface e0/0
+DSW1(config-if)# description R1-E0/0
+DSW1(config-if)# interface e0/1
+DSW1(config-if)# description DSW2-E0/1
+DSW1(config-if)# interface e0/2
+DSW1(config-if)# description DSW2-E0/2
+DSW1(config-if)# interface e0/3
+DSW1(config-if)# description ASW1-E0/0
+DSW1(config-if)# interface e1/0
+DSW1(config-if)# description ASW2-E0/0
+DSW1(config-if)# interface range e1/1-3, e2/0-3, e3/0-3
+DSW1(config-if-range)# shutdown
+DSW1(config-if-range)# end 
+DSW1# copy running-config startup-config
 ```
 
-DSW2, ASW1, ASW2, and R1 follow the same pattern with their own hostnames and neighbors.
+**Other devices**: DSW2, ASW1, ASW2, and R1 get the same commands with their own hostname. Each interface description names the neighbor at the other end o the link, from the **Network links** table (for example, ASW1 e0/0 is `DSW1-E0/3`). On the access switches, ports facing endpoints are described after the client, from the **Client devices** table (for example, ASW1 e0/2 is `PC-ENG`).
 
 **Why**:
 * **Hostnames** show up in the prompt, in logs and in CDP, so you always know which device you're on.
@@ -119,9 +116,10 @@ DSW2, ASW1, ASW2, and R1 follow the same pattern with their own hostnames and ne
 * **The domain name** is needed later to generate the RSA keys for SSH.
 * **The banner**: warns that access is restricted, a standard requirement on managed devices.
 * **Shutting down unused ports** means nobody can plug in a spare port and land on the network.
-
 ### Step 2 – VLSM addressing plan
-I sized each subnet for its host count, assigning the largest first so the `/23` block is used with no gaps.
+**Applies to**: the whole network.
+
+I sized each subnet for its host count, assigning the largest first. Every subnet needs room for its hosts plus the gateway, and the space left at the end of the `/23` is free for future VLANs.
 
 | VLAN | Name        | Hosts | Subnet                        | Usable range          | Gateway (R1)   |
 | ---- | ----------- | ----- | ----------------------------- | --------------------- | -------------- |
@@ -140,56 +138,83 @@ Static management addresses: R1 `.33`, DSW1 `.34`, DSW1 `.35`, ASW1 `.36`, ASW2 
 **Why IT-ADMIN is a /29, not a /30**: the lab has one admin PC, so with the gateway the VLAN needs two addresses, and a /30 would fit exactly. I used a /29 instead to leave room for growth: it gives six usable addresses, enough for a second admin workstation without re-addressing the VLAN or rewriting the management ACLs.
 
 ### Step 3 - VLANs, trunks and native VLAN
-I created the same VLANs on all four switches, set an unused native VLAN, and disabled DTP so no port can negotiate itself into a trunk.
+**Configured on**: DSW1, DSW2, ASW1, ASW2. **Shown**: DSW1 (VLANs and trunks), ASW1 (access ports)
+
+VLANs - identical on all four switches. VTP is set to transparent so switches never learn or overwrite VLANs from each other.
 
 ```text
-vtp mode transparent
-
-vlan 10
- name ENGINEERING
-vlan 20
- name SALES
-vlan 30
- name GUEST
-vlan 40
- name SERVERS
-vlan 50
- name IT-ADMIN
-vlan 99
- name MGMT
-vlan 998
- name PARKING
-vlan 999
- name NATIVE
- 
+DSW1> enable
+DSW1# configure terminal
+DSW1(config)# vtp mode transparent
+DSW1(config)# vlan 10
+DSW1(config-vlan)# name ENGINEERING
+DSW1(config-vlan)# vlan 20
+DSW1(config-vlan)# name SALES
+DSW1(config-vlan)# vlan 30
+DSW1(config-vlan)# name GUEST
+DSW1(config-vlan)# vlan 40
+DSW1(config-vlan)# name SERVERS
+DSW1(config-vlan)# vlan 50
+DSW1(config-vlan)# name IT-ADMIN
+DSW1(config-vlan)# vlan 99
+DSW1(config-vlan)# name MGMT
+DSW1(config-vlan)# vlan 998
+DSW1(config-vlan)# name PARKING
+DSW1(config-vlan)# vlan 999
+DSW1(config-vlan)# name NATIVE 
 ```
 
-**Trunk ports** (DSW1 shown, use the trunk ports from the table on each switch)
+**Trunks** - every link in the **Network links** table is a trunk. On DSW1 that's the link to R1 (e0/0),
+the two links to DSW2 (e0/1-2) and the links to both access switches (e0/3, e1/0):
 
 ```text
-interface range e0/0-3, e1/0
- switchport trunk encapsulation dot1q
- switchport mode trunk
- switchport trunk native vlan 999
- switchport nonegotiate
- switchport trunk allowed vlan 10,20,30,40,50,99
+DSW1# configure terminal
+DSW1(config)# interface range e0/0-3, e1/0
+DSW1(config-if-range)# switchport trunk encapsulation dot1q
+DSW1(config-if-range)# switchport mode trunk
+DSW1(config-if-range)# switchport trunk native vlan 999
+DSW1(config-if-range)# switchport nonegotiate
+DSW1(config-if-range)# switchport trunk allowed vlan 10,20,30,40,50,99
 ```
 
-**Access and unused ports** (ASW1 shown)
+**Other switches**: use the same trunk commands on each switch's trunk ports from the **Network links** table: DSW2 `e0/1-3, e1/0`, ASW1 `e0/0-1`, ASW2 `e0/0-1`
+
+**Access ports** - each endpoint port is locked to one VLAN. ASW1 shown:
 
 ```text
-interface range e0/2, e1/0
- switchport mode access
- switchport access vlan 10
-interface e0/3
- switchport mode access
- switchport access vlan 20
-interface range e1/1-3, e2/0-3, e3/0-3
- switchport mode access
- switchport access vlan 998
+ASW1# configure terminal
+ASW1(config)# interface range e0/2, e1/0
+ASW1(config-if-range)# description ENGINEERING
+ASW1(config-if-range)# switchport mode access
+ASW1(config-if-range)# switchport access vlan 10
+ASW1(config-if-range)# switchport nonegotiate
+ASW1(config-if-range)# interface e0/3
+ASW1(config-if)# switchport mode access
+ASW1(config-if)# switchport access vlan 20
+ASW1(config-if)# switchport nonegotiate
 ```
 
-On the distribution switches , the unused ports are parked the same way (e1/1-3, e2/0-3, e3/0-3).
+**ASW2**: the same commands, with the ports and VLANs from the **Client devices** table: e0/2 → VLAN 30, e0/3 → VLAN 40, e1/0 → VLAN 50
+
+**Unused ports** - moved into the parking VLAN and kept shut down. ASW1 shown; the other switches park every port not listed in the tables above:
+
+```text
+ASW1# configure terminal
+ASW1(config)# interface range e1/1-3, e2/0-3, e3/0-3
+ASW1(config-if-range)# switchport mode access
+ASW1(config-if-range)# switchport access vlan 998
+ASW1(config-if-range)# shutdown
+```
+
+**Why**:
+* **An unused native VLAN** that isn't in the allowed list means nothing can cross a trunk untagged, which closes off double-tagging VLAN-hopping attacks.
+* **`switchport nonegotiate`** disables DTP, so no port can negotiate itself into a trunk. It only works once the port is hard-set to trunk or access mode, so it comes after `switchport mode`.
+* **VTP transparent mode** stops a switch with a higher revision number from wiping the VLAN database.
+* **Parking unused ports in VLAN 998**, which isn't allowed on any trunk, means a spare port enabled by mistake still can't reach anything.
+### Step 4 - EtherChannel (LACP)
+**Configured on**: DSW1 and DSW2. **Shown**: DSW1.
+
+Links 2 and 3 between DSW1 and DSW2 form one logical link, so spanning tree doesn't block one of them.
 
 ## Verification
 Show the key `show` commands and explain what in the output proves it works.
