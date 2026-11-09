@@ -22,9 +22,5 @@ npm ci
 npm i --no-save @quartz-themes/default
 npx quartz plugin install --from-config
 
-# Diagnostic: show where plugins were installed (temporary)
-ls .quartz/plugins 2>/dev/null || echo "NO .quartz/plugins"
-ls node_modules/@quartz-community | head -50
-
 # Build the site
 npx quartz build "$@"
