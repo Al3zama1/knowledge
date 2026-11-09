@@ -73,10 +73,11 @@ GNS3 · Cisco OS · VLANs · Rapid PVST+ · EtherChannel · DHCP Snooping · DAI
 - [[#Step 4 – EtherChannel (LACP)|Bundled the distribution uplinks into an LACP EtherChannel.]]
 - [[#Step 5 – Rapid PVST+ and per-VLAN root bridges|Ran Rapid PVST+ with a different root bridge per VLAN]] so both uplinks carry traffic.
 - [[#Step 6 – Inter-VLAN routing and DHCP|Set up router-on-a-stick inter-VLAN routing and DHCP on R1.]]
-- [[#Step 7 – Edge protection and port security|Protected the edge with PortFast, BPDU Guard, Root Guard and port security.]]
-- [[#Step 8 – DHCP snooping and Dynamic ARP Inspection|Blocked a rogue DHCP server with DHCP snooping and added Dynamic ARP Inspection.]]
-- [[#Step 9 – ACLs and SSH-only management|Isolated guests with an inbound ACL and limited the management VLAN to the IT admin subnet with SSH-only access.]]
-- [[#Step 10 – NTP, syslog and SNMPv3|Added NTP, syslog and SNMPv3]], then [[#Troubleshooting – seven injected faults|found and fixed seven injected faults]].
+- [[#Step 7 – Assigning IP addresses|Assigned addresses]]: DHCP for client PCs, static addresses for the server, the admin PC and the switch management interfaces.
+- [[#Step 8 – Edge protection and port security|Protected the edge with PortFast, BPDU Guard, Root Guard and port security.]]
+- [[#Step 9 – DHCP snooping and Dynamic ARP Inspection|Blocked a rogue DHCP server with DHCP snooping and added Dynamic ARP Inspection.]]
+- [[#Step 10 – ACLs and SSH-only management|Isolated guests with an inbound ACL and limited the management VLAN to the IT admin subnet with SSH-only access.]]
+- [[#Step 11 – NTP, syslog and SNMPv3|Added NTP, syslog and SNMPv3]], then [[#Troubleshooting – seven injected faults|found and fixed seven injected faults]].
 
 ## Implementation
 > [!tip] How to read the configs
@@ -133,11 +134,22 @@ I sized each subnet for its host count, assigning the largest first. Every subne
 | 50   | IT-ADMIN    | 2     | 192.168.11.48/29              | 192.168.11.49 - .54   | 192.168.11.49  |
 | 999  | NATIVE      | -     | unused (trunk native VLAN)    | -                     | -              |
 | 998  | PARKING     | -     | unused (holds shutdown ports) | -                     | -              |
-
 Free for growth: `192.168.11.56 - 192.168.11.255`
-Static management addresses: R1 `.33`, DSW1 `.34`, DSW1 `.35`, ASW1 `.36`, ASW2 `.37`
 
-**Why IT-ADMIN is a /29, not a /30**: the lab has one admin PC, so with the gateway the VLAN needs two addresses, and a /30 would fit exactly. I used a /29 instead to leave room for growth: it gives six usable addresses, enough for a second admin workstation without re-addressing the VLAN or rewriting the management ACLs.
+**Static addresses**
+
+| **Device**         | VLAN | Address          | Gateway       |
+| ------------------ | ---- | ---------------- | ------------- |
+| R1 (e0/0.99)       | 99   | 192.168.11.33/28 | -             |
+| DSW1 (VLAN 99 SVI) | 99   | 192.168.11.34/28 | 192.168.11.33 |
+| DSW2 (VLAN 99 SVI) | 99   | 192.168.11.35/28 | 192.168.11.33 |
+| ASW1 (VLAN 99 SVI) | 99   | 192.168.11.36/28 | 192.168.11.33 |
+| ASW2 (VLAN 99 SVI) | 99   | 192.168.11.37/28 | 192.168.11.33 |
+| SRV                | 40   | 192.168.11.10/27 | 192.168.11.1  |
+| ADMIN              | 50   | 192.168.11.50/29 | 192.168.11.49 |
+PP-ENG, PC-SALES, and PC-GUEST get their addresses from R1 over DHCP
+
+**Why IT-ADMIN is a /29, not a /30:** the requirement is two admin hosts, and R1's gateway needs an address too, so the VLAN needs three usable addresses plus the two reserved ones (network and broadcast). A /30 has only two usable addresses, so the smallest subnet that fits is a /29, with six usable. The lab uses one of the two admin host addresses today (ADMIN at `.50`), leaving the second ready for another admin workstation.
 
 ### Step 3 - VLANs, trunks and native VLAN
 **Configured on**: DSW1, DSW2, ASW1, ASW2. **Shown**: DSW1 (VLANs and trunks), ASW1 (access ports)
@@ -213,10 +225,166 @@ ASW1(config-if-range)# shutdown
 * **`switchport nonegotiate`** disables DTP, so no port can negotiate itself into a trunk. It only works once the port is hard-set to trunk or access mode, so it comes after `switchport mode`.
 * **VTP transparent mode** stops a switch with a higher revision number from wiping the VLAN database.
 * **Parking unused ports in VLAN 998**, which isn't allowed on any trunk, means a spare port enabled by mistake still can't reach anything.
-### Step 4 - EtherChannel (LACP)
+### Step 4 – EtherChannel (LACP)
 **Configured on**: DSW1 and DSW2. **Shown**: DSW1.
 
 Links 2 and 3 between DSW1 and DSW2 form one logical link, so spanning tree doesn't block one of them.
+
+```text
+DSW1# configure terminal
+DSW1(config)# interface range e0/1-2
+DSW1(config-if-range)# channel-group 1 mode active
+DSW1(config-if-range)# exit
+DSW1(config)# interface port-channel 1
+DSW1(config-if)# switchport trunk encapsulation dot1q
+DSW1(config-if)# switchport mode trunk
+DSW1(config-if)# switchport trunk native vlan 999
+DSW1(config-if)# switchport nonegotiate
+DSW1(config-if)# switchport trunk allowed vlan 10,20,30,40,50,99
+```
+
+**DSW2**: identical, on its e0/1-2.
+
+**Why**: `mode active` uses LACP, the open standard. Both sides negotiate the bundle, so a misconfigured member port gets suspended instead of creating a loop. The port-channel carries the same trunk settings as the physical links.
+### Step 5 – Rapid PVST+ and per-VLAN root bridges
+**Configured on**: all four switches (Rapid PVST+); DSW1 and DSW2 (root bridges). **Shown**: DSW1 and DSW2.
+
+```text
+DSW1# configure terminal
+DSW1(config)# spanning-tree mode rapid-pvst
+DSW1(config)# spanning-tree vlan 10,20,99 root primary
+DSW1(config)# spanning-tree vlan 30,40,50 root secondary
+DSW1(config)# end
+```
+
+```
+DSW2# configure terminal
+DSW2(config)# spanning-tree mode rapid-pvst
+DSW2(config)# spanning-tree vlan 30,40,50 root primary
+DSW2(config)# spanning-tree vlan 10,20,99 root secondary
+```
+
+**ASW1 and ASW2**: only `spanning-tree mode rapid-pvsp`. They should never become root.
+
+**Why**: With a single root, each access switch blocks one uplink for every VLAN, so half the bandwidth sits idle. Splitting roots means each uplink forwards for some VLANs and stays as the backup for the others. Each distribution switch is also the secondary root for the other's VLANs, so if one fails the other takes over.
+### Step 6 – Inter-VLAN routing and DHCP
+**Configuration on**: R1.
+
+R1 routes between VLANs on sub-interfaces of its single link to DSW1 (link 1) and hands out addresses to the client VLANs
+
+```text
+R1# configure terminal
+R1(config)# interface e0/0
+R1(config-if)# no shutdown
+R1(config-if)# interface e0/0.10
+R1(config-subif)# encapsulation dot1Q 10
+R1(config-subif)# ip address 192.168.10.1 255.255.255.128
+R1(config-subif)# interface e0/0.20
+R1(config-subif)# encapsulation dot1Q 20
+R1(config-subif)# ip address 192.168.10.193 255.255.255.192
+R1(config-subif)# interface e0/0.30
+R1(config-subif)# encapsulation dot1Q 30
+R1(config-subif)# ip address 192.168.10.129 255.255.255.192
+R1(config-subif)# interface e0/0.40
+R1(config-subif)# encapsulation dot1Q 40
+R1(config-subif)# ip address 192.168.11.1 255.255.255.224
+R1(config-subif)# interface e0/0.50
+R1(config-subif)# encapsulation dot1Q 50
+R1(config-subif)# ip address 192.168.11.49 255.255.255.248
+R1(config-subif)# interface e0/0.99
+R1(config-subif)# encapsulation dot1Q 99
+R1(config-subif)# ip address 192.168.11.33 255.255.255.240
+R1(config-subif)# interface e0/0.999
+R1(config-subif)# encapsulation dot1Q 999 native
+```
+
+DHCP - ENGINEERING shown:
+
+```text
+R1# configure terminal
+R1(config)# ip dhcp excluded-address 192.168.10.1 192.168.10.10
+R1(config)# ip dhcp pool ENGINEERING
+R1(dhcp-config)# network 192.168.10.0 255.255.255.128
+R1(dhcp-config)# default-router 192.168.10.1
+R1(dhcp-config)# dns-server 192.168.10.1
+```
+
+**Other pools**: SALES and GUEST follow the same pattern, using their subnet and gateway from the **VLSM addressing plan**. SRV, ADMIN, and the network devices use static addresses.
+### Step 7 – Assigning IP addresses
+**Configured on**: all endpoints and switches. **Shown**: PC-GUEST and PC-ENG (DHCP), SRV (static), DSW1 (management SVI)
+
+**DHCP clients** - PC-ENG, PC-SALES and PC-GUEST request an address from R1, which is acting as the DHCP server. 
+
+PC-GUEST (VPCS):
+```text
+PC-GUEST> ip dhcp
+DDORA IP 192.168.10.135/26 GW 192.168.10.129
+```
+`DDORA` shows the full DHCP exchange completing: Discovery, Offer, Request, Acknowledge.
+
+PC-ENG (Ubuntu)
+
+```text
+root@PC-ENG:~# dhclient eth0
+root@PC-ENG:~# ip -4 addr show eth0
+```
+
+**Other DHCP clients**: PC-SALES uses `ip dhcp` like PC-GUEST and receives an address from the SALES pool.
+
+**Static addresses** - the server and the admin PC need addresses that never change, because ACLs, syslog and SNMP point at them.
+
+SRV (Ubuntu)
+```text:
+root@SRV:~# ip addr add 192.168.11.10/27 dev eth0
+root@SRV:~# ip link set eth0 up
+root@SRV:~# ip route add default via 192.168.11.1
+```
+
+**Admin**: the same commands with `192.168.11.50/30` and gateway `192.168.11.49`.
+
+**Switch management interfaces** - each switch gets a static address on a VLAN 99 SVI, plus a default gateway so it can reply to the IT-ADMIN subnet:
+
+```text
+DSW1# configure terminal
+DSW1(config)# interface vlan 99
+DSW1(config-if)# ip address 192.168.11.34 255.255.255.240
+DSW1(config-if)# no shutdown
+DSW1(config-if)# exit
+DSW1(config)# ip default-gateway 192.168.11.33
+DSW1(config)# end
+```
+
+**Other switches** the same commands with their address from the **Static addresses** table: DSW2 `.35`, ASW1 `.36`, ASW2 `.37`. R1 doesn't need this; its management address is on sub-interface `e0/0.99`.
+
+**Why `ip default-gateway` and not default route**: the switches run as Layer 2 devices with IP routing off, so they use that command to reach other subnets.
+
+### Step 8 – Edge protection and port security
+**Configured on**: ASW1 and ASW2 (edge ports); DSW1 and DSW2 (Root Guard). **Shown**: ASW1 and DSW1.
+
+Every endpoint port gets PortFast for fast startup, BPDU Guard to shut the port if a switch is plugged in, and port security to limit MAC addresses:
+
+```text
+ASW1# configure terminal
+ASW1(config)# interface range e0/2-3, e1/0
+ASW1(config-if-range)# spanning-tree portfast
+ASW1(config-if-range)# spanning-tree bpduguard enable
+ASW1(config-if-range)# switchport port-security
+ASW1(config-if-range)# switchport port-security maximum 2
+ASW1(config-if-range)# switchport port-security mac-address sticky
+ASW1(config-if-range)# switchport port-security violation restrict
+```
+
+**ASW2**: the same commands on its endpoint ports, e0/2-3 and e1/0.
+
+Root Guard on the distribution switches' downlinks to the access switches keeps an access switch from ever becoming root:
+
+```text
+DSW1# configure terminal
+DSW1(config)# interface range e0/3, e1/0
+DSW1(config-if-range)# spanning-tree guard root
+```
+
+**DSW2**: the same, on its downlinks e0/3 and e1/0
 
 ## Verification
 Show the key `show` commands and explain what in the output proves it works.
