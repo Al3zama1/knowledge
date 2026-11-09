@@ -1,0 +1,60 @@
+/* ===== Code blocks (Tech with Abran) ===== */
+
+/* Card color behind code blocks, from your portfolio's --surface */
+:root {
+  --code-bg: #ffffff;
+}
+:root[saved-theme="dark"] {
+  --code-bg: #121b2e;
+}
+
+/* Monospace font that works on every OS (matches your portfolio's --font-mono) */
+pre,
+code,
+kbd,
+samp {
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", "Cascadia Mono", Menlo,
+    Consolas, "Liberation Mono", monospace !important;
+}
+
+/* The block itself */
+pre {
+  background-color: var(--code-bg) !important;
+  border: 1px solid var(--lightgray);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  box-shadow: 0 1px 2px rgba(20, 32, 51, 0.05);
+}
+
+/* Text inside the block */
+pre > code {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  background: none !important;
+  border: none;
+  padding: 0;
+  white-space: pre;            /* never wrap config lines */
+  font-variant-ligatures: none; /* keep characters like -> as typed */
+}
+
+/* Inline `code` in sentences */
+:not(pre) > code {
+  font-size: 0.875em;
+  color: var(--dark);
+  background-color: var(--highlight);
+  border: 1px solid var(--lightgray);
+  border-radius: 6px;
+  padding: 0.1em 0.4em;
+}
+
+/* Copy button: subtle until you hover */
+pre .clipboard-button {
+  border: 1px solid var(--lightgray);
+  border-radius: 6px;
+  background-color: var(--code-bg);
+  opacity: 0.7;
+}
+pre:hover .clipboard-button {
+  opacity: 1;
+}

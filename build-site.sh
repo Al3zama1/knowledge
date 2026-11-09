@@ -8,6 +8,8 @@ git clone --depth 1 --branch v5 https://github.com/jackyzha0/quartz.git .build
 # Apply your settings
 cp .site/quartz.config.yaml .build/
 if [ -f .site/quartz.lock.json ]; then cp .site/quartz.lock.json .build/; fi
+[ -f .build/quartz/styles/custom.scss ] || echo "WARNING: custom.scss not found in Quartz"
+cat .site/custom.scss >> .build/quartz/styles/custom.scss
 
 # Copy your notes in
 rm -rf .build/content && mkdir -p .build/content
