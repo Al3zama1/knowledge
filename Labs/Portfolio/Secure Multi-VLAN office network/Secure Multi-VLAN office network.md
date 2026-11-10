@@ -385,13 +385,114 @@ DSW1(config-if-range)# spanning-tree guard root
 ```
 
 **DSW2**: the same, on its downlinks e0/3 and e1/0
+### Step 9 - DHCP snooping and Dynamic ARP Inspection
+**Configured on**: ASW1 and ASW2. **Shown**: ASW1
 
-## Verification
-Show the key `show` commands and explain what in the output proves it works.
+Only the uplinks toward the distribution switches are trusted, so a DHCP server plugged into an access port gets blocked. I tested this by powering on ROGUE (dnsmasq) on ASW1 e1/0. DAI then checks ARP replies against the snooping binding table.
+
+```
+ASW1# configure terminal
+ASW1(config)# ip dhcp snooping
+ASW1(config)# ip dhcp snooping vlan 10,20,30
+ASW1(config)# no ip dhcp snooping information option
+ASW1(config)# ip arp inspection vlan 10,20,30
+ASW1(config)# interface range e0/0-1
+ASW1(config-if-range)# ip dhcp snooping trust
+ASW1(config-if-range)# ip arp inspection trust
+```
+
+**ASW2**: identical; its uplinks are also e0/0-1
+
+Snooping and DAI cover the DHCP client VLANs only (20,20,30). SRV and ADMIN have static addresses with no snooping bindings, so DAI on VLANs 40 or 50 would drop their ARP traffic unless an ARP ACL was added.
+
+**Why** `no ip dhcp snooping information option`: By default the switch inserts option 82 into DHCP requests, and the IOS DHCP server on R1 drops them. Turning it off lets clients get addresses while snooping stays on.
+### Step 10 - ACLs and SSH-only management
+**Configured on**: R1 (ACLs); all devices (SSH and management access). **Shown**: R1 and DSW1.
+
+**Guest isolation (R1)**: an inbound ACL on the guest sub-interface blocks internal networks but still permits the DHCP exchange.
 
 ```text
-! paste show command output here
+R1# configure terminal
+R1(config)# ip access-list extended GUEST-IN
+R1(config-ext-nacl)# permit udp any eq bootpc any eq bootps
+R1(config-ext-nacl)# deny ip 192.168.10.128 0.0.0.63 192.168.10.0 0.0.1.255
+R1(config-ext-nacl)# permit ip 192.168.10.128 0.0.0.63 any
+R1(config-ext-nacl)# exit
+R1(config)# interface e0/0.30
+R1(config-subif)# ip access-group GUEST-IN in
 ```
+
+**Management lockdown (R1)**: only the IT-ADMIN subnet can reach the management VLAN.
+
+```
+R1# configure terminal
+R1(config)# ip access-list extended MGMT-OUT
+R1(config-ext-nacl)# permit ip 192.168.11.48 0.0.0.7 192.168.11.32 0.0.0.15
+R1(config-ext-nacl)# deny ip any any log
+R1(config-ext-nacl)# exit
+R1(config)# interface e0/0.99
+R1(config-subif)# ip access-group MGMT-OUT out
+```
+
+**SSH and VTY access DSW1**
+
+```
+DSW1# configure terminal
+DSW1(config)# crypto key generate rsa modulus 2048
+DSW1(config)# ip ssh version 2
+DSW1(config)# username admin privilege 15 secret <strong-password>
+DSW1(config)# ip access-list standard SSH-FROM-IT
+DSW1(config-std-nacl)# permit 192.168.11.48 0.0.0.7
+DSW1(config-std-nacl)# exit
+DSW1(config)# line vty 0 4
+DSW1(config-line)# login local
+DSW1(config-line)# transport input ssh
+DSW1(config-line)# access-class SSH-FROM-IT in
+```
+
+**Other devices:** DSW2, ASW1, ASW2 and R1 use the same commands. They're reachable at the management addresses set in [[#Step 7 – Assigning IP addresses|Step 7]].
+
+**Why the admin PC has its own VLAN:** A router ACL only filters traffic that passes _through_ the router. If ADMIN shared a VLAN with other users, those users could reach it directly at Layer 2, so the ACL would protect nothing.
+### Step 11 – NTP, syslog and SNMPv3
+**Configured on:** R1 (NTP source); all switches (NTP client, syslog, SNMP). **Shown:** R1 and DSW1.
+
+text
+
+```text
+R1# configure terminal
+R1(config)# ntp master 3
+R1(config)# end
+```
+
+text
+
+```text
+DSW1# configure terminal
+DSW1(config)# ntp server 192.168.11.33
+DSW1(config)# service timestamps log datetime msec
+DSW1(config)# logging host 192.168.11.10
+DSW1(config)# logging trap informational
+DSW1(config)# snmp-server group NETMON v3 priv
+DSW1(config)# snmp-server user monitor NETMON v3 auth sha <auth-password> priv aes 128 <priv-password>
+```
+
+**Other switches:** identical. `192.168.11.10` is SRV, which collects syslog and polls the devices over SNMP.
+
+**Why:** Synced clocks make log timestamps line up across devices, which matters when tracing a fault. SNMPv3 with `priv` encrypts monitoring traffic, unlike v1/v2c community strings.
+## Verification
+
+|Check|Device|Command|What proves it works|
+|---|---|---|---|
+|VLANs exist and ports are assigned|All switches|`show vlan brief`|All VLANs active; endpoint ports in the right VLAN|
+|Trunks are up with the right native VLAN|All switches|`show interfaces trunk`|Native VLAN 999, allowed VLANs `10,20,30,40,50,99`|
+|EtherChannel is bundled|DSW1, DSW2|`show etherchannel summary`|Po1 shows `(SU)`, both members `(P)`|
+|Root bridges are split|DSW1, DSW2|`show spanning-tree root`|DSW1 root for 10/20/99, DSW2 root for 30/40/50|
+|Clients get addresses|R1|`show ip dhcp binding`|Bindings for PC-ENG, PC-SALES and PC-GUEST|
+|Management SVIs are up|All switches|`show ip interface brief`|`Vlan99` up/up with the right address|
+|Snooping is building its table|ASW1, ASW2|`show ip dhcp snooping binding`|One entry per DHCP client|
+|Rogue DHCP is blocked|ROGUE, PC-ENG|Power on ROGUE, renew PC-ENG's lease|PC-ENG still gets its address from R1|
+|Guests can't reach internal networks|PC-GUEST|`ping` to PC-ENG and SRV|Pings fail|
+|SSH only from IT admin|ADMIN, PC-SALES|`ssh admin@192.168.11.34`|ADMIN connects; PC-SALES is refused|
 
 ## Troubleshooting
 
@@ -405,23 +506,19 @@ Show the key `show` commands and explain what in the output proves it works.
 ```
 
 ## Result & Key Learning Outcomes
-- 
-- 
-
+- Showed that splitting root bridges per VLAN uses both uplinks instead of leaving one idle.
+- Learned that an inbound ACL can break DHCP unless the DHCP exchange is permitted.
+- Saw how DHCP snooping and BPDU Guard stop rogue devices at the access port.
+- Learned that a router ACL cannot protect hosts in the same VLAN, so the admin PC belongs in its own VLAN.
+- Practiced a repeatable troubleshooting method across seven injected faults.
 ## Skills Demonstrated
-- 
-- 
+- VLSM subnetting
+- VLANs and trunking
+- Spanning tree 
+- EtherChannel
+- Switch Security
+- DHCP
+- Troubleshooting
 
 ## Files
-- [All files for this lab](https://github.com/al3zama1/knowledge/tree/main/Labs/Portfolio/LAB-FOLDER/files)
-
-
-
-> Educational home lab built in GNS3 on my own computer. Not a production environment.
-> Video walkthrough: [YouTube link](#)
-
-A redundant two-tier campus LAN (collapsed core) for five departments, with VLSM addressing, load-balanced Rapid PVST+, EtherChannel, Layer 2 security, ACL-controlled access, SSH-only management, NTP, syslog and SNMP. I verified it, then found and fixed injected faults.
-
-**Skills shown:** VLSM subnetting, VLANs and 802.1Q trunking, Rapid PVST+, LACP EtherChannel, router-on-a-stick, DHCP, port security, DHCP snooping, DAI, ACLs, SSH hardening, NTP/syslog/SNMP, troubleshooting.
-
----
+- [All files for this lab](https://github.com/Al3zama1/knowledge/tree/main/Labs/Portfolio/Secure%20Multi-VLAN%20office%20network)
