@@ -12,10 +12,6 @@ category: portfolio
 date: 2026-11-08
 video:
 ---
-
-> [!info] Lab environment
-> This lab ran in GNS3 on my own computer for educational purposes. Nothing here took place in a production or employer environment.
-
 ## Challenge / Objective
 Design and build a redundant, secure campus network for five departments using VLSM addressing, then verify it, document it and troubleshoot injected faults.
 
@@ -77,7 +73,7 @@ GNS3 · Cisco OS · VLANs · Rapid PVST+ · EtherChannel · DHCP Snooping · DAI
 - [[#Step 8 – Edge protection and port security|Protected the edge with PortFast, BPDU Guard, Root Guard and port security.]]
 - [[#Step 9 – DHCP snooping and Dynamic ARP Inspection|Blocked a rogue DHCP server with DHCP snooping and added Dynamic ARP Inspection.]]
 - [[#Step 10 – ACLs and SSH-only management|Isolated guests with an inbound ACL and limited the management VLAN to the IT admin subnet with SSH-only access.]]
-- [[#Step 11 – NTP, syslog and SNMPv3|Added NTP, syslog and SNMPv3]], then [[#Troubleshooting – seven injected faults|found and fixed seven injected faults]].
+- [[#Step 11 – NTP, syslog and SNMPv3|Added NTP, syslog and SNMPv3]]
 
 ## Implementation
 > [!tip] How to read the configs
@@ -350,13 +346,14 @@ DSW1(config)# interface vlan 99
 DSW1(config-if)# ip address 192.168.11.34 255.255.255.240
 DSW1(config-if)# no shutdown
 DSW1(config-if)# exit
+DSW1(config-if)# no ip routing
 DSW1(config)# ip default-gateway 192.168.11.33
 DSW1(config)# end
 ```
 
 **Other switches** the same commands with their address from the **Static addresses** table: DSW2 `.35`, ASW1 `.36`, ASW2 `.37`. R1 doesn't need this; its management address is on sub-interface `e0/0.99`.
 
-**Why `ip default-gateway` and not default route**: the switches run as Layer 2 devices with IP routing off, so they use that command to reach other subnets.
+**Why `ip default-gateway` and not default route**: the switches run as Layer 2 devices with IP routing off, so they use that command to reach other subnets. Consequently, ip routing must be disabled, otherwise the switch will silently ignore the command.
 
 ### Step 8 – Edge protection and port security
 **Configured on**: ASW1 and ASW2 (edge ports); DSW1 and DSW2 (Root Guard). **Shown**: ASW1 and DSW1.
@@ -385,7 +382,7 @@ DSW1(config-if-range)# spanning-tree guard root
 ```
 
 **DSW2**: the same, on its downlinks e0/3 and e1/0
-### Step 9 - DHCP snooping and Dynamic ARP Inspection
+### Step 9 – DHCP snooping and Dynamic ARP Inspection
 **Configured on**: ASW1 and ASW2. **Shown**: ASW1
 
 Only the uplinks toward the distribution switches are trusted, so a DHCP server plugged into an access port gets blocked. I tested this by powering on ROGUE (dnsmasq) on ASW1 e1/0. DAI then checks ARP replies against the snooping binding table.
@@ -406,7 +403,7 @@ ASW1(config-if-range)# ip arp inspection trust
 Snooping and DAI cover the DHCP client VLANs only (20,20,30). SRV and ADMIN have static addresses with no snooping bindings, so DAI on VLANs 40 or 50 would drop their ARP traffic unless an ARP ACL was added.
 
 **Why** `no ip dhcp snooping information option`: By default the switch inserts option 82 into DHCP requests, and the IOS DHCP server on R1 drops them. Turning it off lets clients get addresses while snooping stays on.
-### Step 10 - ACLs and SSH-only management
+### Step 10 – ACLs and SSH-only management
 **Configured on**: R1 (ACLs); all devices (SSH and management access). **Shown**: R1 and DSW1.
 
 **Guest isolation (R1)**: an inbound ACL on the guest sub-interface blocks internal networks but still permits the DHCP exchange.
@@ -440,7 +437,7 @@ R1(config-subif)# ip access-group MGMT-OUT out
 DSW1# configure terminal
 DSW1(config)# crypto key generate rsa modulus 2048
 DSW1(config)# ip ssh version 2
-DSW1(config)# username admin privilege 15 secret <strong-password>
+DSW1(config)# username admin privilege 15 secret strong-password
 DSW1(config)# ip access-list standard SSH-FROM-IT
 DSW1(config-std-nacl)# permit 192.168.11.48 0.0.0.7
 DSW1(config-std-nacl)# exit
@@ -453,32 +450,6 @@ DSW1(config-line)# access-class SSH-FROM-IT in
 **Other devices:** DSW2, ASW1, ASW2 and R1 use the same commands. They're reachable at the management addresses set in [[#Step 7 – Assigning IP addresses|Step 7]].
 
 **Why the admin PC has its own VLAN:** A router ACL only filters traffic that passes _through_ the router. If ADMIN shared a VLAN with other users, those users could reach it directly at Layer 2, so the ACL would protect nothing.
-### Step 11 – NTP, syslog and SNMPv3
-**Configured on:** R1 (NTP source); all switches (NTP client, syslog, SNMP). **Shown:** R1 and DSW1.
-
-text
-
-```text
-R1# configure terminal
-R1(config)# ntp master 3
-R1(config)# end
-```
-
-text
-
-```text
-DSW1# configure terminal
-DSW1(config)# ntp server 192.168.11.33
-DSW1(config)# service timestamps log datetime msec
-DSW1(config)# logging host 192.168.11.10
-DSW1(config)# logging trap informational
-DSW1(config)# snmp-server group NETMON v3 priv
-DSW1(config)# snmp-server user monitor NETMON v3 auth sha <auth-password> priv aes 128 <priv-password>
-```
-
-**Other switches:** identical. `192.168.11.10` is SRV, which collects syslog and polls the devices over SNMP.
-
-**Why:** Synced clocks make log timestamps line up across devices, which matters when tracing a fault. SNMPv3 with `priv` encrypts monitoring traffic, unlike v1/v2c community strings.
 ## Verification
 
 |Check|Device|Command|What proves it works|
@@ -493,17 +464,6 @@ DSW1(config)# snmp-server user monitor NETMON v3 auth sha <auth-password> priv a
 |Rogue DHCP is blocked|ROGUE, PC-ENG|Power on ROGUE, renew PC-ENG's lease|PC-ENG still gets its address from R1|
 |Guests can't reach internal networks|PC-GUEST|`ping` to PC-ENG and SRV|Pings fail|
 |SSH only from IT admin|ADMIN, PC-SALES|`ssh admin@192.168.11.34`|ADMIN connects; PC-SALES is refused|
-
-## Troubleshooting
-
-### Fault 1 – Short name
-**Symptom:** What you noticed.
-**Cause:** What was actually wrong.
-**Fix:** What you changed, and how you confirmed it worked.
-
-```text
-! relevant output or config
-```
 
 ## Result & Key Learning Outcomes
 - Showed that splitting root bridges per VLAN uses both uplinks instead of leaving one idle.

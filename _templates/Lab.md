@@ -5,10 +5,6 @@ category: portfolio
 date: {{date:YYYY-MM-DD}}
 video:
 ---
-
-> [!info] Lab environment
-> This lab ran in GNS3 on my own computer for educational purposes.
-
 ## Challenge / Objective
 One or two sentences on what this lab sets out to do and why.
 
