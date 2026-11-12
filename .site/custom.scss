@@ -1,5 +1,13 @@
 /* ===== Code blocks (Tech with Abran) ===== */
 
+
+article img {
+  display: block;
+  margin: 1.5rem auto;
+  max-width: 100%;
+  height: auto;
+}
+
 /* Card color behind code blocks, from your portfolio's --surface */
 :root {
   --code-bg: #ffffff;
