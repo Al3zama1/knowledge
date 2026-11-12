@@ -1,0 +1,228 @@
+ASW2#show startup-config
+Using 2020 out of 131072 bytes, uncompressed size = 4045 bytes
+!
+! Last configuration change at 03:09:01 UTC Wed Nov 11 2026
+!
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+service compress-config
+!
+hostname ASW2
+!
+boot-start-marker
+boot-end-marker
+!
+!
+!
+username admin privilege 15 secret 5 $1$x7qH$S1MaQ2rZxB4oF3GoaWwLT.
+no aaa new-model
+!
+!
+!
+!
+!
+vtp mode transparent
+no ip routing
+ip arp inspection vlan 10,20,30
+!
+!
+!
+ip dhcp snooping vlan 10,20,30
+no ip dhcp snooping information option
+ip dhcp snooping
+ip domain-name withabran.com
+no ip cef
+no ipv6 cef
+!
+!
+!
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+!
+!
+vlan 10
+ name ENGINEERING
+!
+vlan 20
+ name SALES
+!
+vlan 30
+ name GUEST
+!
+vlan 40
+ name SERVERS
+!
+vlan 50
+ name IT-ADMIN
+!
+vlan 99
+ name MGMT
+!
+vlan 998
+ name PARKING
+!
+vlan 999
+ name NATIVE
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+interface Ethernet0/0
+ description DSW1-E1/0
+ switchport trunk allowed vlan 10,20,30,40,50,99
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport mode trunk
+ switchport nonegotiate
+ ip arp inspection trust
+ ip dhcp snooping trust
+!
+interface Ethernet0/1
+ description DSW2-E1/0
+ switchport trunk allowed vlan 10,20,30,40,50,99
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport mode trunk
+ switchport nonegotiate
+ ip arp inspection trust
+ ip dhcp snooping trust
+!
+interface Ethernet0/2
+ description PC-GUEST-E0
+ switchport access vlan 30
+ switchport mode access
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ switchport port-security mac-address sticky 0050.7966.6801
+ switchport port-security
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+!
+interface Ethernet0/3
+ description SRV-Eth0
+ switchport access vlan 40
+ switchport mode access
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ switchport port-security mac-address sticky 0242.a9ab.6c00
+ switchport port-security
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+!
+interface Ethernet1/0
+ description ADMIN-Eth0
+ switchport access vlan 50
+ switchport mode access
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ switchport port-security mac-address sticky 0242.5bc4.8600
+ switchport port-security
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+!
+interface Ethernet1/1
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface Ethernet1/2
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface Ethernet1/3
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface Ethernet2/0
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface Ethernet2/1
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface Ethernet2/2
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface Ethernet2/3
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface Ethernet3/0
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface Ethernet3/1
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface Ethernet3/2
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface Ethernet3/3
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface Vlan99
+ ip address 192.168.11.37 255.255.255.240
+ no ip route-cache
+!
+ip default-gateway 192.168.11.33
+ip forward-protocol nd
+!
+ip http server
+ip http secure-server
+!
+ip ssh version 2
+ip ssh server algorithm encryption aes128-ctr aes192-ctr aes256-ctr
+ip ssh client algorithm encryption aes128-ctr aes192-ctr aes256-ctr
+!
+ip access-list standard SSH-FROM-IT
+ permit 192.168.11.48 0.0.0.7
+!
+!
+!
+!
+!
+control-plane
+!
+banner motd ^C Authorized access only ^C
+!
+line con 0
+ logging synchronous
+line aux 0
+line vty 0 4
+ access-class SSH-FROM-IT in
+ login local
+ transport input ssh
+!
+!
+!
+end
