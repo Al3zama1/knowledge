@@ -1,12 +1,11 @@
 ---
 tags:
-  - lab
   - switching
-  - vlans
-  - stp
-  - etherchannel
+  - EtherChannel
   - security
-  - dhcp
+  - VLANS
+  - STP
+  - DHCP
 type: lab
 category: portfolio
 date: 2026-11-08
@@ -56,11 +55,11 @@ Design and build a redundant, secure campus network for five departments using V
 | PC-SALES (VPC)                                    | ASW1 e0/3 | 20   |
 | ROGUE (Ubuntu + dnsmasq, off until security test) | ASW1 e1/0 | 10   |
 | PC-GUEST (VPC)                                    | ASW2 e0/2 | 30   |
-| SRV (Ubuntu: syslog, SNMP polling, NTP tests)     | ASW2 e0/3 | 40   |
+| SRV (Ubuntu)                                      | ASW2 e0/3 | 40   |
 | ADMIN (Ubuntu, SSH client)                        | ASW2 e1/0 | 50   |
 
 ## Tools & Technologies
-GNS3 · Cisco OS · VLANs · Rapid PVST+ · EtherChannel · DHCP Snooping · DAI · Port Security · SSH
+GNS3 · Cisco OS · VLANs · Rapid PVST+ · EtherChannel · STP · DHCP Snooping · DAI · Port Security · SSH
 
 ## What I Implemented
 - [[#Step 1 – Base Configuration|Applied a base configuration]] to every device: hostname, domain name, login banner, interface descriptions and unused ports shut down.
@@ -73,7 +72,6 @@ GNS3 · Cisco OS · VLANs · Rapid PVST+ · EtherChannel · DHCP Snooping · DAI
 - [[#Step 8 – Edge protection and port security|Protected the edge with PortFast, BPDU Guard, Root Guard and port security.]]
 - [[#Step 9 – DHCP snooping and Dynamic ARP Inspection|Blocked a rogue DHCP server with DHCP snooping and added Dynamic ARP Inspection.]]
 - [[#Step 10 – ACLs and SSH-only management|Isolated guests with an inbound ACL and limited the management VLAN to the IT admin subnet with SSH-only access.]]
-- [[#Step 11 – NTP, syslog and SNMPv3|Added NTP, syslog and SNMPv3]]
 
 ## Implementation
 > [!tip] How to read the configs
@@ -327,7 +325,7 @@ root@PC-ENG:~# ip -4 addr show eth0
 
 **Other DHCP clients**: PC-SALES uses `ip dhcp` like PC-GUEST and receives an address from the SALES pool.
 
-**Static addresses** - the server and the admin PC need addresses that never change, because ACLs, syslog and SNMP point at them.
+**Static addresses** - the server and the admin PC need addresses that never change.
 
 SRV (Ubuntu)
 ```text:
@@ -383,6 +381,42 @@ DSW1(config-if-range)# spanning-tree guard root
 
 **DSW2**: the same, on its downlinks e0/3 and e1/0
 ### Step 9 – DHCP snooping and Dynamic ARP Inspection
+#### Attacks before security implementation
+I configured the ROGUE client and plugged it into ASW1 E1/0 before implementing security measures. 
+
+The ROGUE attacker assigns itself a static IP in the same subnet as the target devices.
+```text
+auto eth0
+iface eth0 inet static
+    address 192.168.10.250
+    netmask 255.255.255.0
+```
+
+Configured dnsmasq as a malicious DHCP server, essentially carrying out man-in-the-middle attacks against the clients that accept an IP from it through DHCP.
+
+```text
+interface=eth0
+bind-interfaces
+port=0
+dhcp-range=192.168.10.200,192.168.10.220,255.255.255.0,1h
+dhcp-option=3,192.168.10.250
+dhcp-option=6,192.168.10.250
+dhcp-authoritative
+log-dhcp
+```
+
+ * `dhcp-range` hands out a distinct range (.200 to .220), so you can tell at a glance which server answered.
+ * `dhcp-option=3` (default gateway) and `dhcp-option=6` (DNS server) point clients at the rogue itself.
+
+PC-ENG was a victim of the ROGUE attacker, populating its IP information with the information given by the attacker. When PC-ENG needs to go to another subnet or out to the Internet, it will reach the ROGUE attacker instead of the legitimate DHCP server (R1).
+
+```text
+root@PC-ENG:~# ip route
+default via 192.168.10.15 dev eth0 metric 216
+192.168.10.0/24 dev eth0 proto kernel scope link src 192.168.10.219
+```
+
+#### Security implementation
 **Configured on**: ASW1 and ASW2. **Shown**: ASW1
 
 Only the uplinks toward the distribution switches are trusted, so a DHCP server plugged into an access port gets blocked. I tested this by powering on ROGUE (dnsmasq) on ASW1 e1/0. DAI then checks ARP replies against the snooping binding table.
@@ -403,6 +437,23 @@ ASW1(config-if-range)# ip arp inspection trust
 Snooping and DAI cover the DHCP client VLANs only (20,20,30). SRV and ADMIN have static addresses with no snooping bindings, so DAI on VLANs 40 or 50 would drop their ARP traffic unless an ARP ACL was added.
 
 **Why** `no ip dhcp snooping information option`: By default the switch inserts option 82 into DHCP requests, and the IOS DHCP server on R1 drops them. Turning it off lets clients get addresses while snooping stays on.
+
+#### Attacks after security implementation
+
+ASW1 checked the binding table, found no entry matching MAC (`0000.0000.0000`) + IP (`192.168.10.115`) on port `e0/2`, and dropped the ARP.
+
+```Text
+ASW1#
+*Nov 12 01:17:40.340: %SW_DAI-4-DHCP_SNOOPING_DENY: 1 Invalid ARPs (Req) on Et0/2, vlan 10.([0242.bcb7.5700/192.168.10.219/0000.0000.0000/192.168.10.15/01:17:39 UTC Thu Nov 12 2026])
+```
+
+PC-ENG received an IP from R1, which is the legitimate device acting as the DHCP server for all the subnets.
+
+```text
+root@PC-ENG:~# ip route
+default via 192.168.10.1 dev eth0 metric 220
+192.168.10.0/25 dev eth0 proto kernel scope link src 192.168.10.11
+```
 ### Step 10 – ACLs and SSH-only management
 **Configured on**: R1 (ACLs); all devices (SSH and management access). **Shown**: R1 and DSW1.
 
@@ -481,4 +532,4 @@ DSW1(config-line)# access-class SSH-FROM-IT in
 - Troubleshooting
 
 ## Files
-- [All files for this lab](https://github.com/Al3zama1/knowledge/tree/main/Labs/Portfolio/Secure%20Multi-VLAN%20office%20network)
+- [All files for this lab](https://github.com/Al3zama1/knowledge/tree/main/Labs/Portfolio/Secure%20Multi-VLAN%20office%20network/files)
