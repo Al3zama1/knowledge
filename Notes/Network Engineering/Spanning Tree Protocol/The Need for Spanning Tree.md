@@ -51,7 +51,6 @@ Because MAC tables are constantly changing:
 - ARP replies from PC2 may be forwarded to SW3 or SW2 instead of PC1.
 - PC1 may receive replies only sporadically — if at all.
 ## Observed Behavior in the Lab With STP Disabled
-
 ```text
 PC1> ping 192.168.1.2  
   
@@ -72,7 +71,6 @@ PC1> ping 192.168.1.2
 
 With STP disabled, there was intermittent success followed by complete failure. Reachability between PC1 and PC2 depends on timing.
 ## Observed Behavior in the Lab With STP Enabled
-
 ```text
 PC1> ping 192.168.1.2  
   
