@@ -88,7 +88,7 @@ SW4 elects e0/2 as its Root port because SW2’s e0/2 has a lower STP port ID th
 ![[stp-root-port-election-port-id-verification.webp]]
 
 We can verify that SW2’s e0/2 has a lower internal port number and it is connected to SW4’s e0/2 port. Therefore, SW4 elects e0/2 as it Root port.
-### Designated Port
+## Designated Port
 STP prevents the formation of loops by stopping the flow of regular data traffic through redundant links (collision domains) between switches. To achieve this, one side of every redundant link becomes a Designated port and the other an Alternate port.
 
 The Designated port in a redundant link is elected with the following tiebreakers in this exact order:
